@@ -17,7 +17,7 @@ import org.apache.jmeter.protocol.jdbc.config.DataSourceElement
 
 import java.sql.*
 def jdbcUrl = props.getProperty('jdbc_url', 'jdbc:ignite:thin://localhost:10800,localhost:10801,localhost:10802') +
-    '?queryTimeoutSeconds=' + props.getProperty('query_timeout_sec', '0') + '&amp;connectionTimeoutMillis=' + props.getProperty('connect_timeout_ms', '0')
+    '?queryTimeout=' + props.getProperty('query_timeout_sec', '0') + '&amp;connectionTimeout=' + props.getProperty('connect_timeout_ms', '0')
 // one connection per virtual user, opened lazily (so a ramp opens connections gradually) and replaced after any failure
 def getConn = {
   def c = vars.getObject('conn')
@@ -58,7 +58,7 @@ return 'batch ' + n
 
 import java.sql.*
 def jdbcUrl = props.getProperty('jdbc_url', 'jdbc:ignite:thin://localhost:10800,localhost:10801,localhost:10802') +
-    '?queryTimeoutSeconds=' + props.getProperty('query_timeout_sec', '0') + '&amp;connectionTimeoutMillis=' + props.getProperty('connect_timeout_ms', '0')
+    '?queryTimeout=' + props.getProperty('query_timeout_sec', '0') + '&amp;connectionTimeout=' + props.getProperty('connect_timeout_ms', '0')
 // one connection per virtual user, opened lazily (so a ramp opens connections gradually) and replaced after any failure
 def getConn = {
   def c = vars.getObject('conn')

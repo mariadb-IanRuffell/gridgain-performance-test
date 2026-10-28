@@ -15,9 +15,9 @@ import jmx  # noqa: E402
 from workloads import WORKLOADS, POOL  # noqa: E402
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "plans"
-DRIVER = "org.apache.ignite.jdbc.IgniteJdbcDriver"
+DRIVER = "org.apache.ignite.IgniteJdbcThinDriver"
 URL = "${__P(jdbc_url,jdbc:ignite:thin://localhost:10800\\,localhost:10801\\,localhost:10802)}"
-URL += "?queryTimeoutSeconds=${__P(query_timeout_sec,0)}&connectionTimeoutMillis=${__P(connect_timeout_ms,0)}"
+URL += "?queryTimeout=${__P(query_timeout_sec,0)}&connectionTimeout=${__P(connect_timeout_ms,0)}"
 LOAD_SCRIPT = """
 import java.util.concurrent.ThreadLocalRandom
 import org.apache.jmeter.protocol.jdbc.config.DataSourceElement
@@ -75,7 +75,7 @@ def schema_and_drop():
             if s not in seen:
                 seen.add(s)
                 create.append(s)
-    create.append("CREATE TABLE IF NOT EXISTS probe_kv (id BIGINT PRIMARY KEY, v VARCHAR(64)) ZONE PERF_ZONE")  # availability probe
+    create.append("CREATE TABLE IF NOT EXISTS probe_kv (id BIGINT PRIMARY KEY, v VARCHAR(64)) WITH \"template=perf_tpl\"")  # availability probe
     write("schema.jmx", ddl_plan("GG9 schema", create))
     drops = [s for wl in WORKLOADS.values() for s in wl.drop] + ["DROP TABLE IF EXISTS probe_kv"]
     write("drop.jmx", ddl_plan("GG9 drop", drops))
@@ -96,7 +96,7 @@ def load_plan(wl):
 TC_PRELUDE = """
 import java.sql.*
 def jdbcUrl = props.getProperty('jdbc_url', 'jdbc:ignite:thin://localhost:10800,localhost:10801,localhost:10802') +
-    '?queryTimeoutSeconds=' + props.getProperty('query_timeout_sec', '0') + '&connectionTimeoutMillis=' + props.getProperty('connect_timeout_ms', '0')
+    '?queryTimeout=' + props.getProperty('query_timeout_sec', '0') + '&connectionTimeout=' + props.getProperty('connect_timeout_ms', '0')
 // one connection per virtual user, opened lazily (so a ramp opens connections gradually) and replaced after any failure
 def getConn = {
   def c = vars.getObject('conn')

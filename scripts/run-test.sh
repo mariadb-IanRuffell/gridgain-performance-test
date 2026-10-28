@@ -22,7 +22,7 @@ for kv in "$@"; do echo "$kv" >> "$OUT/profile.properties"; done   # overrides w
 PROFILE="$OUT/profile.properties"; echo "$OUT" > "$ROOT/results/.last_run"
 CONN_MODE=$(prop conn_mode "$PROFILE")   # "thread" = one connection per virtual user (needed for very high thread counts)
 SALT=$(( $(date +%s) - 1735689600 ))
-export JVM_ARGS="${JVM_ARGS:--Xms1g -Xmx${JMETER_HEAP:-4g} -XX:+UseG1GC -Xss512k -XX:-MaxFDLimit ${EXTRA_JVM_ARGS:--Dio.netty.eventLoopThreads=1}}"   # -MaxFDLimit: macOS JVMs otherwise cap fds at 10240
+export JVM_ARGS="${JVM_ARGS:--Xms1g -Xmx${JMETER_HEAP:-4g} -XX:+UseG1GC -Xss512k -XX:-MaxFDLimit $(tr "\n" " " < "$ROOT/config/jvm-opens.args") ${EXTRA_JVM_ARGS:-}}"   # -MaxFDLimit: macOS JVMs otherwise cap fds at 10240
 ulimit -n 200000 2>/dev/null || ulimit -n 100000 2>/dev/null || ulimit -n 65536 2>/dev/null || true
 
 echo ">> $RUN_ID  workload=$WORKLOAD mode=$MODE"
@@ -48,7 +48,7 @@ if [ "$MODE" = "ramp" ]; then
   python3 "$ROOT/framework/breakpoint_watch.py" "$OUT/results.jtl" "$OUT/profile.properties" "$JPID" "$OUT" & BG+=($!)
 fi
 if grep -qE "^(chaos_events|probe)=" "$PROFILE" && grep -q "^probe_targets=" "$ENVF"; then
-  java -cp "$ROOT/tools/apache-jmeter-$JMETER_VERSION/lib/*" "$ROOT/framework/Probe.java" "$OUT/probe.csv" "$JPID" "$OUT/env.properties" "$OUT/profile.properties" >"$OUT/probe.log" 2>&1 & BG+=($!)
+  java @"$ROOT/config/jvm-opens.args" -cp "$ROOT/tools/apache-jmeter-$JMETER_VERSION/lib/*" "$ROOT/framework/Probe.java" "$OUT/probe.csv" "$JPID" "$OUT/env.properties" "$OUT/profile.properties" >"$OUT/probe.log" 2>&1 & BG+=($!)
 fi
 if grep -q "^chaos_events=" "$PROFILE"; then
   python3 "$ROOT/framework/chaos.py" "$OUT" "$OUT/profile.properties" "$OUT/env.properties" "$JPID" 2>&1 | tee "$OUT/chaos.log" & BG+=($!)

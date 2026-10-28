@@ -1,4 +1,4 @@
-# GridGain 9.1 performance test framework (version set in config/versions.env)
+# GridGain 8.10 performance test framework (branch `gg-8.10`; the GridGain 9 version is on `main`)
 
 JMeter-based, JDBC-driven. Two test shapes over three workloads, with an HTML report per run.
 
@@ -10,11 +10,18 @@ JMeter-based, JDBC-driven. Two test shapes over three workloads, with an HTML re
 
 Workloads (`framework/workloads.py`): **oltp** (point read/update/insert, indexed range, 2-row transaction; Zipf-style key skew), **analytical** (aggregations, 3-way join, top-N, count distinct, indexed lookup), **ingest** (JDBC batch inserts + singles).
 
+## GridGain 8.10 specifics (this branch)
+- **Edition / license:** with a GridGain 8 license file (`gridgain-license.xml` in the project root, or `GG_LICENSE_FILE`) the cluster runs `gridgain/ultimate:8.10.0`. Without one it falls back to `gridgain/community:8.10.0-b2-openjdk21` (the only community 8.10 build so far - a beta) and says so. A GridGain 9 license (`.json`) does not work for 8.
+- **Cluster:** 3 nodes from `cluster/local/docker-compose.yml`; `gridgain-config.xml` enables persistence (so `cluster-up.sh` activates the cluster) and defines the cache templates the SQL tables use.
+- **Client:** thin JDBC driver (`org.apache.ignite.IgniteJdbcThinDriver`, inside `ignite-core`), URL `jdbc:ignite:thin://h1:10800,h2:10800,...` (random endpoint + failover). Ignite 2.x needs the JDK 17+ `--add-opens` flags in `config/jvm-opens.args` (applied to JMeter and the probe automatically). Timeouts are the URL params `queryTimeout` (s) and `connectionTimeout` (ms).
+- **Tables / transactions:** there are no zones; tables are created `WITH "template=..."`. The OLTP `accounts` table uses `perf_txn_tpl` (`TRANSACTIONAL_SNAPSHOT`, i.e. MVCC), the only mode with real SQL transactions in 8.x, so `oltp.tx_transfer` is a genuine 2-row transaction as on GridGain 9. Analytical and ingest tables use the faster `perf_tpl` (`ATOMIC`). Override with `oltp_template` / `olap_template` / `ingest_template`.
+- **Chaos:** node readiness is "REST answers and the cluster is active" (`chaos_ready_*` in the env file). With persistence a restarted node rejoins the baseline topology automatically.
+
 ## Quick start (local)
 
 ```bash
-./scripts/setup-tools.sh                 # JMeter 5.6.3 + GridGain JDBC driver into ./tools
-cp /path/to/gridgain-license.json .      # GridGain 9 needs a license at cluster init
+./scripts/setup-tools.sh                 # JMeter 5.6.3 + GridGain 8 JDBC driver into ./tools
+cp /path/to/gridgain-license.xml .       # optional: GridGain 8 license => Ultimate edition (else Community beta)
 ./scripts/cluster-up.sh                  # 3-node docker cluster, initialised
 python3 framework/gen_plans.py           # (re)generate plans/*.jmx after editing workloads
 ./scripts/prepare-data.sh oltp local smoke   # schema + seed data

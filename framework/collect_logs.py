@@ -17,7 +17,9 @@ import calendar, gzip, json, os, re, subprocess, sys, time, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from props import read_props
 
-LINE = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d:\d{3}) \+0000 \[(\w+)\]\[([^\]]*)\]\[([^\]]*)\] ?(.*)$")
+LINE = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d:\d{3}) \+0000 \[(\w+)\]\[([^\]]*)\]\[([^\]]*)\] ?(.*)$")   # GridGain 9
+# GridGain 8 (log4j2 pattern [%d{ISO8601}][%-5p][%t][%c{1}]): [2026-10-28T10:15:30,123][INFO ][main][IgniteKernal%node1] message
+LINE8 = re.compile(r"^\[?(\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d),(\d{3})\]\[(\w+)\s*\]\[([^\]]*)\]\[([^\]]*)\](?:\[[^\]]*\])? ?(.*)$")
 MAX_ERR, MAX_WARN, MAX_CTX, MAX_LINE = 500, 500, 500, 400
 CTX_SECS = 20
 
@@ -43,8 +45,12 @@ def parse(text):
     out = []
     for raw in text.splitlines():
         m = LINE.match(raw)
+        m8 = None if m else LINE8.match(raw)
         if m:
             out.append(dict(t=epoch(m.group(1)), level=m.group(2).upper(), thread=m.group(3), cls=m.group(4), msg=m.group(5), more=[]))
+        elif m8:
+            out.append(dict(t=calendar.timegm(time.strptime(m8.group(1).replace("T", " "), "%Y-%m-%d %H:%M:%S")) + int(m8.group(2)) / 1000.0,
+                            level=m8.group(3).upper(), thread=m8.group(4), cls=m8.group(5).split("%")[0], msg=m8.group(6), more=[]))
         elif out and raw.strip() and len(out[-1]["more"]) < 8:
             out[-1]["more"].append(raw.strip()[:MAX_LINE])
     return out

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Only used to resolve the GridGain JDBC driver's transitive jars into JMeter's lib/ (see scripts/setup-tools.sh) -->
+<!-- Only used to resolve the GridGain 8 thin JDBC driver (inside ignite-core)'s transitive jars into JMeter's lib/ (see scripts/setup-tools.sh) -->
 <project xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
   <groupId>perf</groupId><artifactId>jdbc-deps</artifactId><version>1</version>
@@ -7,6 +7,6 @@
     <repository><id>gridgain-external</id><url>https://www.gridgainsystems.com/nexus/content/repositories/external</url></repository>
   </repositories>
   <dependencies>
-    <dependency><groupId>org.gridgain</groupId><artifactId>ignite-jdbc</artifactId><version>${gg.version}</version></dependency>
+    <dependency><groupId>org.gridgain</groupId><artifactId>ignite-core</artifactId><version>${gg.version}</version></dependency>
   </dependencies>
 </project>

@@ -9,10 +9,11 @@ from dataclasses import dataclass, field
 from typing import List
 
 POOL = "gg9"
-ZONE = "perf_zone"
+def tpl(prop, default):
+    """GridGain 8 has no zones: tables pick a cache template defined in cluster/local/gridgain-config.xml.
+    perf_txn_tpl = TRANSACTIONAL_SNAPSHOT (MVCC, needed for real SQL transactions), perf_tpl = ATOMIC."""
+    return 'WITH "template=${__P(%s,%s)}"' % (prop, default)
 
-ZONE_DDL = ("CREATE ZONE IF NOT EXISTS %s (PARTITIONS ${__P(zone_partitions,64)}, "
-            "REPLICAS ${__P(zone_replicas,3)}) STORAGE PROFILES ['default']" % ZONE)
 
 
 @dataclass
@@ -99,10 +100,9 @@ return 'tx ok'
 OLTP = Workload(
     key="oltp",
     ddl=[
-        ZONE_DDL,
         "CREATE TABLE IF NOT EXISTS accounts (id BIGINT PRIMARY KEY, customer_id INT, "
         "balance DECIMAL(18,2), status VARCHAR(16), region VARCHAR(8), payload VARCHAR(200), "
-        f"updated_at TIMESTAMP) ZONE {ZONE.upper()}",
+        f"updated_at TIMESTAMP) " + tpl("oltp_template", "perf_txn_tpl"),
         "CREATE INDEX IF NOT EXISTS accounts_customer_idx ON accounts (customer_id)",
     ],
     drop=["DROP TABLE IF EXISTS accounts"],
@@ -153,14 +153,13 @@ return 'op=' + op
 ANALYTICAL = Workload(
     key="analytical",
     ddl=[
-        ZONE_DDL,
         "CREATE TABLE IF NOT EXISTS customers (id BIGINT PRIMARY KEY, name VARCHAR(40), "
-        f"segment VARCHAR(16), region VARCHAR(8)) ZONE {ZONE.upper()}",
+        "segment VARCHAR(16), region VARCHAR(8)) " + tpl("olap_template", "perf_tpl"),
         "CREATE TABLE IF NOT EXISTS products (id BIGINT PRIMARY KEY, category VARCHAR(16), "
-        f"price DECIMAL(10,2)) ZONE {ZONE.upper()}",
+        "price DECIMAL(10,2)) " + tpl("olap_template", "perf_tpl"),
         "CREATE TABLE IF NOT EXISTS orders (id BIGINT PRIMARY KEY, customer_id BIGINT, product_id BIGINT, "
         "qty INT, amount DECIMAL(12,2), order_day INT, region VARCHAR(8), status VARCHAR(12)) "
-        f"ZONE {ZONE.upper()}",
+        + tpl("olap_template", "perf_tpl"),
         "CREATE INDEX IF NOT EXISTS orders_customer_idx ON orders (customer_id)",
         "CREATE INDEX IF NOT EXISTS orders_day_idx ON orders (order_day)",
     ],
@@ -240,9 +239,8 @@ return 'batch ' + n
 INGEST = Workload(
     key="ingest",
     ddl=[
-        ZONE_DDL,
         "CREATE TABLE IF NOT EXISTS events (id BIGINT PRIMARY KEY, device_id INT, ts TIMESTAMP, "
-        f"metric VARCHAR(32), val DOUBLE, tags VARCHAR(100)) ZONE {ZONE.upper()}",
+        "metric VARCHAR(32), val DOUBLE, tags VARCHAR(100)) " + tpl("ingest_template", "perf_tpl"),
     ],
     drop=["DROP TABLE IF EXISTS events"],
     loaders=[],

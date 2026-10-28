@@ -5,6 +5,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WL="${1:?workload}"; ENV_NAME="${2:-local}"; SIZING="${3:-}"
+export JVM_ARGS="${JVM_ARGS:--Xms512m -Xmx2g $(tr "\n" " " < "$ROOT/config/jvm-opens.args")}"   # Ignite 2.x client needs --add-opens on JDK 17+
 JMETER="$ROOT/tools/apache-jmeter-${JMETER_VERSION:-5.6.3}/bin/jmeter"
 mkdir -p "$ROOT/results/_setup"; rm -f "$ROOT"/results/_setup/*
 args=(-q "$ROOT/config/jmeter.properties" -q "$ROOT/config/defaults.properties" -q "$ROOT/config/env/$ENV_NAME.properties")

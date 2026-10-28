@@ -6,3 +6,5 @@ gridgain-license.json
 .DS_Store
 __pycache__/
 *.jtl
+.generated/
+gridgain-license.xml

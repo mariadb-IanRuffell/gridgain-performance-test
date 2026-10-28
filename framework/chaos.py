@@ -35,6 +35,9 @@ class Docker:
         self.prefix = env.get("chaos_container_prefix", "gg9-")
         self.port_base = int(env.get("chaos_rest_port_base", 10300))
         self.stop_grace = env.get("chaos_stop_grace_sec", "30")
+        self.rest_port = env.get("chaos_rest_container_port", "10300")             # container-side REST port (GG9: 10300, GG8: 8080)
+        self.ready_path = env.get("chaos_ready_path", "/management/v1/node/state")
+        self.ready_match = env.get("chaos_ready_match", "STARTED")
 
     def name(self, node):
         return self.prefix + node
@@ -48,8 +51,8 @@ class Docker:
     def ready(self, node):
         n = int(re.sub(r"\D", "", node) or 1)
         try:
-            with urllib.request.urlopen(f"http://localhost:{self.port_base + n - 1}/management/v1/node/state", timeout=3) as r:
-                return r.status == 200 and "STARTED" in r.read().decode()
+            with urllib.request.urlopen(f"http://localhost:{self.port_base + n - 1}{self.ready_path}", timeout=3) as r:
+                return r.status == 200 and self.ready_match in r.read().decode()
         except Exception:
             return False
 
@@ -58,7 +61,8 @@ class Docker:
         return out if rc == 0 else "missing"
 
     def ports_bound(self, node):
-        return bool(sh(f"docker port {self.name(node)} 10300", 20)[1].strip()) and sh(f"docker port {self.name(node)} 10300", 20)[0] == 0
+        rc, out = sh(f"docker port {self.name(node)} {self.rest_port}", 20)
+        return rc == 0 and bool(out.strip())
 
     def restore(self, nodes):
         for n in nodes:

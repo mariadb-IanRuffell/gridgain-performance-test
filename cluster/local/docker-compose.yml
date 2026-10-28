@@ -1,28 +1,31 @@
-# 3-node GridGain 9 cluster for local framework development.
-# Tunables (see config/local.env): GG_VERSION, GG_JVM_MEM, GG_NODE_CPUS, GG_NODE_MEM
+# 3-node GridGain 8.10 cluster for local framework development. scripts/cluster-up.sh picks the edition and generates the
+# node config (.generated/perf-config.xml): Ultimate 8.10.0 when a GridGain 8 license file is present, else Community.
+# Tunables (see config/local.env): GG_IMAGE, GG_JVM_MEM, GG_NODE_CPUS, GG_NODE_MEM
 x-node: &node
-  image: gridgain/gridgain9:${GG_VERSION:-9.1.28}
-  environment:
-    JVM_MAX_MEM: ${GG_JVM_MEM:-2g}
-    JVM_MIN_MEM: ${GG_JVM_MEM:-2g}
+  image: ${GG_IMAGE:-gridgain/ultimate:8.10.0}
+  environment: &env
+    CONFIG_URI: /opt/gridgain/config/perf-config.xml
+    OPTION_LIBS: ignite-rest-http,ignite-log4j2
+    JVM_OPTS: -Xms${GG_JVM_MEM:-1g} -Xmx${GG_JVM_MEM:-1g} -server -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -Duser.timezone=UTC -DIGNITE_QUIET=false
   cpus: ${GG_NODE_CPUS:-2}
   mem_limit: ${GG_NODE_MEM:-4g}
   volumes:
-    - ./gridgain-config.conf:/opt/gridgain/etc/gridgain-config.conf:ro
+    - ./.generated/perf-config.xml:/opt/gridgain/config/perf-config.xml:ro
+    - ./.generated/license.xml:/opt/gridgain/license.xml:ro
 
 services:
   node1:
     <<: *node
-    container_name: gg9-node1
-    command: --node-name node1
-    ports: ["10300:10300", "10800:10800"]
+    container_name: gg8-node1
+    environment: {<<: *env, NODE_NAME: node1}
+    ports: ["10300:8080", "10800:10800"]
   node2:
     <<: *node
-    container_name: gg9-node2
-    command: --node-name node2
-    ports: ["10301:10300", "10801:10800"]
+    container_name: gg8-node2
+    environment: {<<: *env, NODE_NAME: node2}
+    ports: ["10301:8080", "10801:10800"]
   node3:
     <<: *node
-    container_name: gg9-node3
-    command: --node-name node3
-    ports: ["10302:10300", "10802:10800"]
+    container_name: gg8-node3
+    environment: {<<: *env, NODE_NAME: node3}
+    ports: ["10302:8080", "10802:10800"]

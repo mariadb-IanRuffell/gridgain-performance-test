@@ -36,7 +36,7 @@ public class Probe {
             name = name.trim();
             if (name.isEmpty()) continue;
             String url = env.getProperty("probe_url_" + name).replace("\\,", ",")
-                    + "?queryTimeoutSeconds=" + tmo + "&connectionTimeoutMillis=" + (tmo * 1000);
+                    + "?queryTimeout=" + tmo + "&connectionTimeout=" + (tmo * 1000);
             final String n = name; final int s = slot++;
             Thread t = new Thread(() -> loop(n, url, pid, interval, tmo, rows, s, out), "probe-" + n);
             t.start(); ts.add(t);
